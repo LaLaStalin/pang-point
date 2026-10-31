@@ -3,7 +3,7 @@
 --   ปุ่ม "แอดมิน"   -> admin@pangpoint.local  (เห็นทุกหน้า)
 --   ปุ่ม "หน้าร้าน" -> shop@pangpoint.local   (เห็นเฉพาะหน้าขาย)
 --
--- 1) แก้รหัสผ่าน 2 บรรทัดด้านล่าง (ตัวเลขล้วน อย่างน้อย 6 หลัก)
+-- 1) แก้รหัสผ่าน 2 บรรทัดด้านล่าง (ตัวเลขล้วน แอดมินอย่างน้อย 8 หลัก หน้าร้านอย่างน้อย 6 หลัก)
 -- 2) กด Run
 -- 3) ไม่ต้องเก็บไฟล์ที่ใส่รหัสจริงไว้ / อย่า commit — ภายหลังเปลี่ยนรหัสได้ในเว็บ (จัดการร้าน → รหัสผ่าน)
 -- รันซ้ำได้: ถ้ามีบัญชีอยู่แล้วจะเปลี่ยนเป็นรหัสใหม่
@@ -22,8 +22,8 @@ begin
       ('shop@pangpoint.local',  v_shop_password,  'shop',  'หน้าร้าน', 'staff'::public.user_role)
     ) as t(email, password, username, display_name, role)
   loop
-    if v_account.password !~ '^[0-9]{6,}$' then
-      raise exception 'กรุณาแก้รหัสผ่านของ % ก่อนรัน (ตัวเลขอย่างน้อย 6 หลัก)', v_account.email;
+    if v_account.password !~ case when v_account.role = 'admin' then '^[0-9]{8,}$' else '^[0-9]{6,}$' end then
+      raise exception 'กรุณาแก้รหัสผ่านของ % ก่อนรัน (ตัวเลขล้วน แอดมิน 8 หลักขึ้นไป หน้าร้าน 6 หลักขึ้นไป)', v_account.email;
     end if;
 
     select id into v_id from auth.users where email = v_account.email;

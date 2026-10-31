@@ -11,7 +11,10 @@ export function PasswordForm({ account, title, hint }: { account: Account; title
   const [pending, startTransition] = useTransition();
 
   const mismatch = confirm !== "" && password !== confirm;
-  const canSubmit = password.length >= 6 && password === confirm;
+  // แอดมินเห็นต้นทุน/กำไรและเปลี่ยนรหัสได้ทุกบัญชี จึงต้องยาวกว่า (ตรงกับ admin_set_password)
+  const minDigits = account === "admin" ? 8 : 6;
+  const tooShort = password !== "" && password.length < minDigits;
+  const canSubmit = password.length >= minDigits && password === confirm;
   const digitsOnly = (v: string) => v.replace(/\D/g, "");
 
   function submit() {
@@ -36,7 +39,7 @@ export function PasswordForm({ account, title, hint }: { account: Account; title
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <label>
-          <span className="label">รหัสใหม่ (ตัวเลขอย่างน้อย 6 หลัก)</span>
+          <span className="label">รหัสใหม่ (ตัวเลขอย่างน้อย {minDigits} หลัก)</span>
           <input
             className="input"
             type="password"
@@ -60,7 +63,8 @@ export function PasswordForm({ account, title, hint }: { account: Account; title
           />
         </label>
       </div>
-      {mismatch && <p className="text-sm text-red-600">รหัสทั้งสองช่องไม่ตรงกัน</p>}
+      {tooShort && <p className="text-sm text-stone-500">ต้องมีอย่างน้อย {minDigits} หลัก</p>}
+      {mismatch &&<p className="text-sm text-red-600">รหัสทั้งสองช่องไม่ตรงกัน</p>}
       {message && <p className={`text-sm ${message.ok ? "text-emerald-700" : "text-red-600"}`}>{message.text}</p>}
       <button className="btn-primary" disabled={!canSubmit || pending} onClick={submit}>
         {pending ? "กำลังบันทึก..." : "เปลี่ยนรหัสผ่าน"}

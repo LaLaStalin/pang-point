@@ -31,6 +31,17 @@ type Receipt = {
 
 const CASH_NOTES = [20, 50, 100, 500, 1000];
 
+// รหัสบิลจากหน้าจอ — ส่งซ้ำด้วยรหัสเดิม (เน็ตหลุดแล้วกดยืนยันใหม่) ระบบจะไม่สร้างบิลซ้ำ
+function newClientRef() {
+  if (typeof crypto.randomUUID === "function") return crypto.randomUUID();
+  // เบราว์เซอร์เก่า / เปิดผ่าน http ที่ไม่ใช่ localhost
+  const b = crypto.getRandomValues(new Uint8Array(16));
+  b[6] = (b[6] & 0x0f) | 0x40;
+  b[8] = (b[8] & 0x3f) | 0x80;
+  const h = Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+}
+
 // ซื้อรวมตั้งแต่จำนวนนี้ขึ้นไปต้องเป็นบิลราคาส่ง
 const WHOLESALE_MIN_QTY = 10;
 
@@ -59,7 +70,10 @@ export function SellFlow({
   const [received, setReceived] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [priceChanged, setPriceChanged] = useState(false);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
+  // สร้างใหม่ทุกครั้งที่เข้าขั้นรับเงิน รายการในบิลจึงตรงกับรหัสนี้เสมอ
+  const [clientRef, setClientRef] = useState("");
 
   const tiers = products.filter((p) => p.kind === "tier");
   const others = products.filter((p) => p.kind === "other");
@@ -79,9 +93,22 @@ export function SellFlow({
     setQty((q) => ({ ...q, [id]: Math.max(0, Math.min(9999, Math.floor(value) || 0)) }));
   }
 
+  const cartParam = () => lines.map((l) => `${l.product.id}:${l.qty}`).join(",");
+
   function moveToWholesale() {
-    const cart = lines.map((l) => `${l.product.id}:${l.qty}`).join(",");
-    router.replace(`/sell/wholesale?cart=${cart}`);
+    router.replace(`/sell/wholesale?cart=${cartParam()}`);
+  }
+
+  // แอดมินเพิ่งแก้ราคา -> โหลดหน้าใหม่ทั้งหน้าให้ได้ราคาล่าสุด โดยยกรายการในบิลไปด้วย
+  function reloadPrices() {
+    window.location.href = `/sell/${priceType}?cart=${cartParam()}`;
+  }
+
+  function goPay() {
+    setClientRef(newClientRef());
+    setError(null);
+    setPriceChanged(false);
+    setStep("pay");
   }
 
   function resetBill() {
@@ -96,6 +123,7 @@ export function SellFlow({
   }
 
   async function confirmSale() {
+    if (submitting) return;
     setSubmitting(true);
     setError(null);
     const supabase = createClient();
@@ -104,10 +132,13 @@ export function SellFlow({
       p_payment_method: method,
       p_received: method === "cash" ? receivedNum : total,
       p_items: lines.map((l) => ({ product_id: l.product.id, qty: l.qty })),
+      p_expected_total: Math.round(total * 100) / 100,
+      p_client_ref: clientRef,
     });
     setSubmitting(false);
 
     if (error) {
+      setPriceChanged(error.hint === "price_changed");
       setError(error.message || "บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง");
       return;
     }
@@ -120,7 +151,8 @@ export function SellFlow({
       total: Number(data.total_amount),
       received: Number(data.received_amount),
       change: Number(data.change_amount),
-      method,
+      // บิลที่บันทึกไปแล้วก่อนหน้า (ส่งซ้ำ) ใช้วิธีจ่ายที่บันทึกไว้จริง
+      method: data.payment_method ?? method,
     });
     // อัปเดต stock ในหน้าจอ (ไว้แสดงคำเตือน) โดยไม่ต้องโหลดใหม่
     setProducts((ps) => ps.map((p) => ({ ...p, qty_on_hand: p.qty_on_hand - (qty[p.id] ?? 0) })));
@@ -201,7 +233,7 @@ export function SellFlow({
             <button
               className="btn-success px-8 py-3 text-lg"
               disabled={totalQty === 0 || mustBeWholesale}
-              onClick={() => setStep("pay")}
+              onClick={goPay}
             >
               ถัดไป →
             </button>
@@ -283,7 +315,16 @@ export function SellFlow({
                 <PromptPayQR promptpayId={promptpayId} amount={total} />
               )}
 
-              {error && <p className="rounded-lg bg-red-50 p-3 text-red-700">{error}</p>}
+              {error && (
+                <div className="space-y-2 rounded-lg bg-red-50 p-3 text-red-700">
+                  <p>{error}</p>
+                  {priceChanged && (
+                    <button className="btn-primary w-full py-3" onClick={reloadPrices}>
+                      โหลดราคาใหม่ (รายการในบิลยังอยู่)
+                    </button>
+                  )}
+                </div>
+              )}
             </section>
           </main>
 
