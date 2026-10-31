@@ -35,6 +35,8 @@ const FILTERS = [
   { key: "void", label: "ยกเลิกบิล" },
 ] as const;
 
+const PAGE_SIZE = 200;
+
 function kindLabel(kind: string) {
   if (kind === "purchase") return { text: "ของเข้า", cls: "bg-emerald-100 text-emerald-800" };
   if (kind === "sale") return { text: "ขาย", cls: "bg-sky-100 text-sky-800" };
@@ -54,25 +56,33 @@ export default async function StockHistoryPage({
   const fromTime = parseTimeParam(sp.from_time, DAY_START);
   const toTime = parseTimeParam(sp.to_time, DAY_END);
   const kind = typeof sp.kind === "string" ? sp.kind : "all";
+  const page = Math.max(1, Math.floor(Number(sp.page)) || 1);
   const range = dateTimeRange(from, fromTime, to, toTime);
-  // ลิงก์ตัวกรองประเภท — คงช่วงวันที่/เวลาที่เลือกไว้
-  const kindHref = (k: string) =>
-    `?${new URLSearchParams({ from, from_time: fromTime, to, to_time: toTime, kind: k })}`;
+  // ลิงก์ตัวกรองประเภท / เปลี่ยนหน้า — คงช่วงวันที่/เวลาที่เลือกไว้ (เปลี่ยนประเภทแล้วกลับไปหน้า 1)
+  const href = (k: string, p = 1) =>
+    `?${new URLSearchParams({ from, from_time: fromTime, to, to_time: toTime, kind: k, ...(p > 1 && { page: String(p) }) })}`;
 
   const supabase = await createClient();
+  // ดึงเกินมา 1 แถว ไว้รู้ว่ามีหน้าถัดไปไหม
   let query = supabase
     .from("stock_movements")
     .select("*")
     .gte("at", range.from)
     .lt("at", range.to)
     .order("at", { ascending: false })
-    .limit(500);
+    // เวลาเดียวกัน (สินค้าในบิล/รอบซื้อเดียวกัน) ต้องเรียงตายตัว ไม่งั้นข้ามหน้าแล้วแถวซ้ำ/หาย
+    .order("kind")
+    .order("sale_id", { ascending: false, nullsFirst: false })
+    .order("product_id")
+    .order("qty_change")
+    .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   if (kind === "adjust") query = query.like("kind", "adjust_%");
   else if (kind !== "all") query = query.eq("kind", kind);
 
   const [{ data, error }, names] = await Promise.all([query, getNameMaps(supabase)]);
   if (error) throw new Error(error.message);
-  const rows = (data ?? []) as Movement[];
+  const hasNext = (data ?? []).length > PAGE_SIZE;
+  const rows = ((data ?? []) as Movement[]).slice(0, PAGE_SIZE);
 
   return (
     <div className="space-y-4">
@@ -85,7 +95,7 @@ export default async function StockHistoryPage({
         {FILTERS.map((f) => (
           <Link
             key={f.key}
-            href={kindHref(f.key)}
+            href={href(f.key)}
             className={`rounded-full px-3 py-1 text-sm ${kind === f.key ? "bg-stone-800 text-white" : "bg-white text-stone-600 ring-1 ring-stone-200"}`}
           >
             {f.label}
@@ -146,6 +156,26 @@ export default async function StockHistoryPage({
           </tbody>
         </table>
       </div>
+
+      {(page > 1 || hasNext) && (
+        <nav className="flex items-center justify-center gap-3">
+          {page > 1 ? (
+            <Link href={href(kind, page - 1)} className="btn-ghost">
+              ← ก่อนหน้า
+            </Link>
+          ) : (
+            <span className="btn-ghost pointer-events-none opacity-40">← ก่อนหน้า</span>
+          )}
+          <span className="text-stone-600">หน้า {page}</span>
+          {hasNext ? (
+            <Link href={href(kind, page + 1)} className="btn-ghost">
+              ถัดไป →
+            </Link>
+          ) : (
+            <span className="btn-ghost pointer-events-none opacity-40">ถัดไป →</span>
+          )}
+        </nav>
+      )}
     </div>
   );
 }
