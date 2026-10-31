@@ -1,6 +1,16 @@
 import Link from "next/link";
 import { DateRangeFilter } from "@/components/DateRangeFilter";
-import { baht, dayRange, fmtDate, fmtTime, parseDateParam } from "@/lib/format";
+import { RefreshButton } from "@/components/RefreshButton";
+import {
+  DAY_END,
+  DAY_START,
+  baht,
+  dateTimeRange,
+  fmtDate,
+  fmtTime,
+  parseDateParam,
+  parseTimeParam,
+} from "@/lib/format";
 import { getNameMaps } from "@/lib/lookups";
 import { createClient } from "@/lib/supabase/server";
 import { ADJUST_REASON_LABEL, type AdjustReason } from "@/lib/types";
@@ -41,8 +51,13 @@ export default async function StockHistoryPage({
   const sp = await searchParams;
   const from = parseDateParam(sp.from);
   const to = parseDateParam(sp.to ?? sp.from);
+  const fromTime = parseTimeParam(sp.from_time, DAY_START);
+  const toTime = parseTimeParam(sp.to_time, DAY_END);
   const kind = typeof sp.kind === "string" ? sp.kind : "all";
-  const range = dayRange(from, to);
+  const range = dateTimeRange(from, fromTime, to, toTime);
+  // ลิงก์ตัวกรองประเภท — คงช่วงวันที่/เวลาที่เลือกไว้
+  const kindHref = (k: string) =>
+    `?${new URLSearchParams({ from, from_time: fromTime, to, to_time: toTime, kind: k })}`;
 
   const supabase = await createClient();
   let query = supabase
@@ -61,13 +76,16 @@ export default async function StockHistoryPage({
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold">ประวัติ stock</h1>
-      <DateRangeFilter from={from} to={to} extra={{ kind }} />
+      <div className="flex items-center justify-between gap-2">
+        <h1 className="text-2xl font-bold">ประวัติ stock</h1>
+        <RefreshButton />
+      </div>
+      <DateRangeFilter from={from} to={to} fromTime={fromTime} toTime={toTime} extra={{ kind }} />
       <div className="flex flex-wrap gap-2">
         {FILTERS.map((f) => (
           <Link
             key={f.key}
-            href={`?from=${from}&to=${to}&kind=${f.key}`}
+            href={kindHref(f.key)}
             className={`rounded-full px-3 py-1 text-sm ${kind === f.key ? "bg-stone-800 text-white" : "bg-white text-stone-600 ring-1 ring-stone-200"}`}
           >
             {f.label}

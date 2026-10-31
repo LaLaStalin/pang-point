@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { DateRangeFilter } from "@/components/DateRangeFilter";
+import { RefreshButton } from "@/components/RefreshButton";
 import { baht, dayRange, fmtDate, fmtTime, parseDateParam } from "@/lib/format";
 import { getNameMaps } from "@/lib/lookups";
 import { createClient } from "@/lib/supabase/server";
@@ -32,7 +33,10 @@ export default async function SalesPage({
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold">ประวัติรายการ</h1>
+      <div className="flex items-center justify-between gap-2">
+        <h1 className="text-2xl font-bold">ประวัติรายการ</h1>
+        <RefreshButton />
+      </div>
       <DateRangeFilter from={from} to={to} />
       <p className="text-stone-600">
         {completed.length} บิล · {completed.reduce((s, x) => s + x.total_qty, 0)} ชิ้น ·{" "}

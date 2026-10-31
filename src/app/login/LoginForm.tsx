@@ -5,7 +5,7 @@ import { login } from "./actions";
 
 const ACCOUNTS = [
   { key: "shop", label: "หน้าร้าน", sub: "ขายขนม", cls: "bg-amber-500 text-white", idle: "border-amber-300 text-amber-700" },
-  { key: "admin", label: "แม่/ครอบครัว", sub: "จัดการร้าน", cls: "bg-stone-800 text-white", idle: "border-stone-300 text-stone-700" },
+  { key: "admin", label: "แอดมิน", sub: "จัดการร้าน", cls: "bg-stone-800 text-white", idle: "border-stone-300 text-stone-700" },
 ] as const;
 
 export function LoginForm() {

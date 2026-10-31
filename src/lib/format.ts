@@ -51,3 +51,24 @@ export function parseDateParam(v: string | string[] | undefined) {
   const s = Array.isArray(v) ? v[0] : v;
   return s && /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : todayStr();
 }
+
+/** เวลาเริ่ม/จบของวัน (ค่าเริ่มต้นของช่องเลือกเวลา = ดูทั้งวัน) */
+export const DAY_START = "00:00";
+export const DAY_END = "23:59";
+
+/** แปลงค่าจาก searchParams ให้เป็นเวลา HH:mm ที่ถูกต้อง ไม่งั้นใช้ fallback */
+export function parseTimeParam(v: string | string[] | undefined, fallback: string) {
+  const s = Array.isArray(v) ? v[0] : v;
+  return s && /^([01]\d|2[0-3]):[0-5]\d$/.test(s) ? s : fallback;
+}
+
+/**
+ * ช่วงเวลา [from, to) จากวันที่ + เวลา (เวลาไทย) เป็น ISO
+ * เวลาจบนับรวมทั้งนาทีนั้น เช่น ถึง 12:00 = ถึง 12:00:59
+ */
+export function dateTimeRange(fromDate: string, fromTime: string, toDate: string, toTime: string) {
+  return {
+    from: dayjs.tz(`${fromDate} ${fromTime}`, TZ).toISOString(),
+    to: dayjs.tz(`${toDate} ${toTime}`, TZ).add(1, "minute").toISOString(),
+  };
+}

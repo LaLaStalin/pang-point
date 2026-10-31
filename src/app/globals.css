@@ -3,7 +3,6 @@
 @theme inline {
   --font-sans: var(--font-thai), ui-sans-serif, system-ui, sans-serif;
 }
-
 :root {
   color-scheme: light;
 }
@@ -22,6 +21,18 @@ input[type="number"]::-webkit-outer-spin-button {
 }
 input[type="number"] {
   -moz-appearance: textfield;
+}
+
+/* Tailwind 4 ไม่ใส่เคอร์เซอร์รูปมือให้ปุ่มแล้ว — ใส่คืนให้ทุกอย่างที่กดได้ (ปุ่มที่กดไม่ได้ยังเป็น not-allowed ตาม .btn) */
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  select:not(:disabled),
+  input[type="checkbox"]:not(:disabled),
+  input[type="radio"]:not(:disabled),
+  label:has(> input[type="checkbox"], > input[type="radio"]) {
+    cursor: pointer;
+  }
 }
 
 @utility btn {

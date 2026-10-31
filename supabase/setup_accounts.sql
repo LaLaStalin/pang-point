@@ -1,7 +1,7 @@
 -- สร้าง (หรือรีเซ็ตรหัสผ่าน) 2 บัญชีของร้าน — รันใน Supabase SQL Editor หลังรัน migrations ครบแล้ว
 --
---   ปุ่ม "แม่/ครอบครัว" -> admin@pangpoint.local  (เห็นทุกหน้า)
---   ปุ่ม "หน้าร้าน"     -> shop@pangpoint.local   (เห็นเฉพาะหน้าขาย)
+--   ปุ่ม "แอดมิน"   -> admin@pangpoint.local  (เห็นทุกหน้า)
+--   ปุ่ม "หน้าร้าน" -> shop@pangpoint.local   (เห็นเฉพาะหน้าขาย)
 --
 -- 1) แก้รหัสผ่าน 2 บรรทัดด้านล่าง (อย่างน้อย 6 ตัว)
 -- 2) กด Run
@@ -10,7 +10,7 @@
 
 do $$
 declare
-  v_admin_password text := 'CHANGE_ME_ADMIN';   -- รหัสของแม่/ครอบครัว
+  v_admin_password text := 'CHANGE_ME_ADMIN';   -- รหัสของแอดมิน
   v_shop_password  text := 'CHANGE_ME_SHOP';   -- รหัสของหน้าร้าน
 
   v_account record;
@@ -18,8 +18,8 @@ declare
 begin
   for v_account in
     select * from (values
-      ('admin@pangpoint.local', v_admin_password, 'admin', 'แม่/ครอบครัว', 'admin'::public.user_role),
-      ('shop@pangpoint.local',  v_shop_password,  'shop',  'หน้าร้าน',      'staff'::public.user_role)
+      ('admin@pangpoint.local', v_admin_password, 'admin', 'แอดมิน',   'admin'::public.user_role),
+      ('shop@pangpoint.local',  v_shop_password,  'shop',  'หน้าร้าน', 'staff'::public.user_role)
     ) as t(email, password, username, display_name, role)
   loop
     if v_account.password like 'CHANGE_ME%' or length(v_account.password) < 6 then

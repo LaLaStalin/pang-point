@@ -1,15 +1,51 @@
 import Link from "next/link";
+import { AutoRefresh } from "@/components/AutoRefresh";
+import { DateRangeFilter } from "@/components/DateRangeFilter";
+import { RefreshButton } from "@/components/RefreshButton";
 import { SummaryCards } from "@/components/SummaryCards";
-import { dayRange, fmtDate, todayStr } from "@/lib/format";
+import {
+  DAY_END,
+  DAY_START,
+  dateTimeRange,
+  dayRange,
+  fmtDate,
+  parseDateParam,
+  parseTimeParam,
+  todayStr,
+} from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 import type { Product, SalesSummary } from "@/lib/types";
 
-export default async function AdminHome() {
-  const supabase = await createClient();
-  const { from, to } = dayRange(todayStr());
+export default async function AdminHome({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const sp = await searchParams;
+  // ค่าเริ่มต้น = วันนี้ทั้งวัน / เลือกช่วงวันและเวลาอื่นได้
+  const from = parseDateParam(sp.from);
+  const to = parseDateParam(sp.to ?? sp.from);
+  const fromTime = parseTimeParam(sp.from_time, DAY_START);
+  const toTime = parseTimeParam(sp.to_time, DAY_END);
+  const range = dateTimeRange(from, fromTime, to, toTime);
+  const today = todayStr();
+  const wholeDay = fromTime === DAY_START && toTime === DAY_END;
+  const isToday = from === today && to === today && wholeDay;
+  const fromLabel = fmtDate(dayRange(from).from);
+  const toLabel = fmtDate(dayRange(to).from);
+  const dayLabel = from === today ? `วันนี้ ${fromLabel}` : `วันที่ ${fromLabel}`;
+  const title =
+    from === to
+      ? wholeDay
+        ? dayLabel
+        : `${dayLabel} ${fromTime}–${toTime}`
+      : wholeDay
+        ? `${fromLabel} – ${toLabel}`
+        : `${fromLabel} ${fromTime} – ${toLabel} ${toTime}`;
 
+  const supabase = await createClient();
   const [{ data: summary, error }, { data: products }] = await Promise.all([
-    supabase.rpc("sales_summary", { p_from: from, p_to: to }),
+    supabase.rpc("sales_summary", { p_from: range.from, p_to: range.to }),
     supabase.from("products").select("*").eq("is_active", true).order("sort_order").order("retail_price"),
   ]);
   if (error) throw new Error(error.message);
@@ -18,7 +54,27 @@ export default async function AdminHome() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">วันนี้ {fmtDate(from)}</h1>
+      {/* รีเฟรชเองเฉพาะตอนช่วงที่ดูมีวันนี้ (ยอดยังเปลี่ยนได้) */}
+      {to >= today && <AutoRefresh />}
+      <div className="flex items-center justify-between gap-2">
+        <h1 className="text-2xl font-bold">{title}</h1>
+        <RefreshButton />
+      </div>
+      <div className="flex flex-wrap items-end gap-2">
+        {/* key: กด "กลับไปดูวันนี้" แล้วช่องวันที่ต้องรีเซ็ตตาม */}
+        <DateRangeFilter
+          key={`${from}_${fromTime}_${to}_${toTime}`}
+          from={from}
+          to={to}
+          fromTime={fromTime}
+          toTime={toTime}
+        />
+        {!isToday && (
+          <Link href="/admin" className="btn-ghost">
+            กลับไปดูวันนี้
+          </Link>
+        )}
+      </div>
       <SummaryCards summary={summary as SalesSummary} />
 
       <section className="card">

@@ -17,15 +17,14 @@ export type Account = keyof typeof ACCOUNT_EMAIL;
 
 export const getProfile = cache(async (): Promise<Profile | null> => {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
+  const { data: auth } = await supabase.auth.getClaims();
+  const userId = auth?.claims.sub;
+  if (!userId) return null;
 
   const { data } = await supabase
     .from("profiles")
     .select("id, username, display_name, role")
-    .eq("id", user.id)
+    .eq("id", userId)
     .single();
   return data;
 });

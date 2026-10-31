@@ -23,9 +23,9 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // getClaims ตรวจ JWT ในเครื่องได้ (ถ้าเปิด asymmetric signing keys) ไม่ต้องยิงไป Auth server ทุกครั้งที่เปลี่ยนหน้า
+  const { data } = await supabase.auth.getClaims();
+  const user = data?.claims;
 
   const isLogin = request.nextUrl.pathname.startsWith("/login");
   if (!user && !isLogin) {
