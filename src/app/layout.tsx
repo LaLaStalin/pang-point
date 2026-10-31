@@ -14,10 +14,7 @@ export const metadata: Metadata = {
   appleWebApp: { capable: true, title: "เจ๊แหม่มสับปะรด", statusBarStyle: "default" },
   // ?v=… บังคับให้เบราว์เซอร์โหลดไอคอนใหม่ (เปลี่ยนไอคอนเมื่อไหร่ให้เพิ่มเลขนี้)
   icons: {
-    icon: [
-      { url: "/favicon.ico?v=2", sizes: "32x32" },
-      { url: "/icon.svg?v=2", type: "image/svg+xml" },
-    ],
+    icon: [{ url: "/favicon.ico?v=3", sizes: "32x32" }],
   },
 };
 
