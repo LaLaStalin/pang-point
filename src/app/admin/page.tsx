@@ -1,6 +1,8 @@
 import Link from "next/link";
+import dayjs from "dayjs";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { DateRangeFilter } from "@/components/DateRangeFilter";
+import { DailySalesChart, ProductSalesChart, type DailySales } from "@/components/OverviewCharts";
 import { RefreshButton } from "@/components/RefreshButton";
 import { SummaryCards } from "@/components/SummaryCards";
 import {
@@ -44,11 +46,22 @@ export default async function AdminHome({
         : `${fromLabel} ${fromTime} – ${toLabel} ${toTime}`;
 
   const supabase = await createClient();
-  const [{ data: summary, error }, { data: products }] = await Promise.all([
+  // กราฟรายวัน: 14 วันล่าสุด จบที่วัน "ถึง" ที่เลือก
+  const chartFrom = dayjs(to).subtract(13, "day").format("YYYY-MM-DD");
+  const [{ data: summary, error }, { data: products }, { data: daily, error: dailyError }] = await Promise.all([
     supabase.rpc("sales_summary", { p_from: range.from, p_to: range.to }),
     supabase.from("products").select("*").eq("is_active", true).order("sort_order").order("retail_price"),
+    supabase.rpc("daily_sales", { p_from: chartFrom, p_to: to }),
   ]);
   if (error) throw new Error(error.message);
+  // กราฟโหลดไม่ได้ ไม่ให้ทั้งหน้าพัง — ยอดสรุปด้านบนยังใช้ได้
+  if (dailyError) console.error("daily_sales:", dailyError.message);
+  const dailyRows = ((daily ?? []) as DailySales[]).map((d) => ({
+    ...d,
+    revenue: Number(d.revenue),
+    cost: Number(d.cost),
+    bills: Number(d.bills),
+  }));
 
   const lowStock = ((products ?? []) as Product[]).filter((p) => p.qty_on_hand <= p.low_stock_threshold);
 
@@ -99,6 +112,15 @@ export default async function AdminHome({
           </ul>
         )}
       </section>
+
+      <div className="grid gap-4 lg:grid-cols-5">
+        <div className="lg:col-span-3">
+          <DailySalesChart data={dailyRows} highlight={to} failed={!!dailyError} />
+        </div>
+        <div className="lg:col-span-2">
+          <ProductSalesChart rows={(summary as SalesSummary).by_product} rangeLabel={title} />
+        </div>
+      </div>
     </div>
   );
 }

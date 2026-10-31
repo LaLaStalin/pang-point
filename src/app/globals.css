@@ -3,12 +3,28 @@
 @theme inline {
   --font-sans: var(--font-thai), ui-sans-serif, system-ui, sans-serif;
 }
+
+/* แอนิเมชันหน้า login: สั่นตอนรหัสผิด / จุดรหัสเด้งขึ้นตอนกด */
+@theme {
+  --animate-shake: shake 0.4s ease-in-out;
+  --animate-pop: pop 0.15s ease-out;
+
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-8px); }
+    40%, 80% { transform: translateX(8px); }
+  }
+  @keyframes pop {
+    from { transform: scale(0.4); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+}
 :root {
   color-scheme: light;
 }
 
 body {
-  background: #fffbf2;
+  background: #fffdf7;
   color: #1c1917;
   -webkit-tap-highlight-color: transparent;
 }
@@ -62,15 +78,28 @@ input[type="number"] {
     @apply btn border border-stone-300 bg-white text-stone-700 hover:bg-stone-50;
   }
   .table-wrap {
-    @apply overflow-x-auto rounded-2xl border border-stone-200 bg-white;
+    @apply overflow-x-auto rounded-2xl border border-stone-200/70 bg-white shadow-[0_2px_12px_-6px_rgba(120,53,15,0.12)];
   }
   .table {
-    @apply w-full text-left text-sm;
+    @apply w-full text-left text-sm tabular-nums;
   }
   .table th {
-    @apply bg-stone-50 px-3 py-2 font-semibold whitespace-nowrap text-stone-600;
+    @apply border-b border-stone-200 bg-stone-100 px-4 py-3 text-xs font-semibold tracking-wide whitespace-nowrap text-stone-500;
   }
   .table td {
-    @apply border-t border-stone-100 px-3 py-2 whitespace-nowrap;
+    @apply border-t border-stone-100 px-4 py-3 whitespace-nowrap;
+  }
+  .table tbody tr:first-child td {
+    @apply border-t-0;
+  }
+  .table tbody tr {
+    @apply transition-colors hover:bg-stone-50;
+  }
+  .table tfoot td {
+    @apply border-t border-stone-200 bg-stone-100 px-4 py-3.5 font-bold text-stone-900;
+  }
+  /* ป้ายตัวเลขในตาราง (คงเหลือ / สถานะ) */
+  .pill {
+    @apply inline-flex min-w-9 items-center justify-center rounded-full px-2.5 py-0.5 text-sm font-bold;
   }
 }

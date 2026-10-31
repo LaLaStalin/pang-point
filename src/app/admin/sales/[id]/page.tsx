@@ -26,8 +26,21 @@ export default async function SaleDetailPage({ params }: { params: Promise<{ id:
 
   return (
     <div className="mx-auto max-w-xl space-y-4">
-      <Link href="/admin/sales" className="text-sm text-amber-700 underline">
-        ← กลับไปประวัติรายการ
+      <Link
+        href="/admin/sales"
+        className="group -ml-1 inline-flex items-center gap-1 rounded-full py-1.5 pr-3.5 pl-2 text-sm font-medium text-stone-500 transition hover:bg-stone-100 hover:text-stone-900"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          className="size-4 transition group-hover:-translate-x-0.5"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.25"
+          aria-hidden
+        >
+          <path d="m15 6-6 6 6 6" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+        กลับไปประวัติรายการ
       </Link>
 
       <section className="card">

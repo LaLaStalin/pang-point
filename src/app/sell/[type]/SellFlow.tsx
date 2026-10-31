@@ -167,9 +167,25 @@ export function SellFlow({
             ← หน้าแรก
           </Link>
           <h1 className="text-xl font-bold">บิลราคา{PRICE_TYPE_LABEL[priceType]}</h1>
-          <span className="ml-auto text-sm opacity-90">
-            {step === "items" ? "1. เลือกขนม" : step === "pay" ? "2. รับเงิน" : "3. สรุปบิล"}
-          </span>
+          <div className="ml-auto flex items-center gap-2.5">
+            <span className="text-sm opacity-90">
+              {step === "items" ? "1. เลือกขนม" : step === "pay" ? "2. รับเงิน" : "3. สรุปบิล"}
+            </span>
+            {/* จุดบอกขั้นตอน: ขั้นปัจจุบันเป็นขีดยาว ขั้นที่ผ่านแล้วจางลง */}
+            <div className="flex gap-1" aria-hidden>
+              {(["items", "pay", "done"] as const).map((s, i, all) => {
+                const current = all.indexOf(step);
+                return (
+                  <span
+                    key={s}
+                    className={`h-1.5 rounded-full bg-white transition-all ${
+                      i === current ? "w-6" : i < current ? "w-1.5 opacity-60" : "w-1.5 opacity-30"
+                    }`}
+                  />
+                );
+              })}
+            </div>
+          </div>
         </div>
       </header>
 
@@ -364,9 +380,9 @@ export function SellFlow({
             </section>
 
             {receipt.method === "cash" && (
-              <section className="rounded-2xl bg-emerald-600 p-6 text-center text-white shadow">
-                <div className="text-lg">ทอนเงิน</div>
-                <div className="text-6xl font-bold">{baht(receipt.change)} ฿</div>
+              <section className="rounded-2xl bg-emerald-50 p-6 text-center ring-1 ring-emerald-100">
+                <div className="text-base font-medium text-emerald-700">ทอนเงิน</div>
+                <div className="mt-1 text-6xl font-bold text-emerald-800">{baht(receipt.change)} ฿</div>
               </section>
             )}
           </main>

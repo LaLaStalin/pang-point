@@ -7,7 +7,7 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "ระบบขายขนมและเช็ค stock",
     start_url: "/",
     display: "standalone",
-    background_color: "#fffbf2",
+    background_color: "#fffdf7",
     theme_color: "#f59e0b",
     icons: [{ src: "/icon.svg", sizes: "any", type: "image/svg+xml" }],
   };

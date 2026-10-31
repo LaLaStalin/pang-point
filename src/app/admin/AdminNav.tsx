@@ -25,8 +25,8 @@ export function AdminNav() {
   const current = clicked?.from === pathname ? clicked.href : pathname;
 
   return (
-    <nav className="border-b border-stone-200 bg-white">
-      <div className="mx-auto flex max-w-5xl gap-1 overflow-x-auto px-4 py-2">
+    <nav className="border-b border-stone-100 bg-white shadow-[0_4px_16px_-8px_rgba(120,53,15,0.15)]">
+      <div className="mx-auto flex max-w-5xl gap-1 overflow-x-auto px-4 py-2 [scrollbar-width:none]">
         {LINKS.map((l) => {
           const active = current === l.href;
           return (
@@ -34,8 +34,10 @@ export function AdminNav() {
               key={l.href}
               href={l.href}
               onClick={() => l.href !== pathname && setClicked({ href: l.href, from: pathname })}
-              className={`shrink-0 rounded-lg px-3 py-1.5 text-sm font-medium whitespace-nowrap ${
-                active ? "bg-amber-500 text-white" : "text-stone-600 hover:bg-stone-100"
+              className={`shrink-0 rounded-full px-3.5 py-1.5 text-sm whitespace-nowrap transition-colors ${
+                active
+                  ? "bg-amber-500 font-semibold text-white shadow-sm shadow-amber-500/30"
+                  : "font-medium text-stone-500 hover:bg-amber-50 hover:text-amber-800"
               }`}
             >
               {l.label}
@@ -54,8 +56,8 @@ function PendingIndicator() {
   if (!pending) return null;
   return (
     <>
-      <span className="ml-1.5 inline-block h-2 w-2 animate-pulse rounded-full bg-white/80 align-middle" />
-      <span className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-amber-50/60">
+      <span className="ml-1.5 inline-block h-2 w-2 animate-pulse rounded-full bg-current align-middle" />
+      <span className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-[#fffdf7]/60">
         <LoadingSpinner />
       </span>
     </>

@@ -45,39 +45,66 @@ export default async function StockPage() {
               const low = p.qty_on_hand <= p.low_stock_threshold;
               return (
                 <tr key={p.id}>
-                  <td className="font-medium">{p.name}</td>
+                  <td className="font-semibold text-stone-900">{p.name}</td>
+                  <td className="text-right text-stone-600">
+                    {p.kind === "tier" ? (
+                      <>
+                        {baht(p.retail_price)}
+                        <span className="text-stone-300"> / </span>
+                        {baht(p.wholesale_price)}
+                      </>
+                    ) : (
+                      baht(p.retail_price)
+                    )}
+                  </td>
                   <td className="text-right">
-                    {p.kind === "tier" ? `${baht(p.retail_price)} / ${baht(p.wholesale_price)}` : baht(p.retail_price)}
+                    <span
+                      className={`pill ${
+                        p.qty_on_hand < 0
+                          ? "bg-red-100 text-red-700"
+                          : low
+                            ? "bg-orange-100 text-orange-700"
+                            : "bg-stone-100 text-stone-800"
+                      }`}
+                    >
+                      {p.qty_on_hand}
+                    </span>
                   </td>
-                  <td
-                    className={`text-right text-base font-bold ${p.qty_on_hand < 0 ? "text-red-600" : low ? "text-orange-600" : ""}`}
-                  >
-                    {p.qty_on_hand}
+                  <td className="text-right text-stone-600">{baht(p.avg_cost)}</td>
+                  <td className="text-right text-stone-600">
+                    {p.kind === "tier" ? (
+                      <>
+                        {baht(p.retail_price - p.avg_cost)}
+                        <span className="text-stone-300"> / </span>
+                        {baht(p.wholesale_price - p.avg_cost)}
+                      </>
+                    ) : (
+                      baht(p.retail_price - p.avg_cost)
+                    )}
                   </td>
-                  <td className="text-right">{baht(p.avg_cost)}</td>
-                  <td className="text-right">
-                    {p.kind === "tier"
-                      ? `${baht(p.retail_price - p.avg_cost)} / ${baht(p.wholesale_price - p.avg_cost)}`
-                      : baht(p.retail_price - p.avg_cost)}
-                  </td>
-                  <td className="text-right">{baht(Math.max(0, p.qty_on_hand) * p.avg_cost)}</td>
+                  <td className="text-right font-medium text-stone-900">{baht(Math.max(0, p.qty_on_hand) * p.avg_cost)}</td>
                 </tr>
               );
             })}
           </tbody>
           <tfoot>
-            <tr className="font-bold">
-              <td className="border-t border-stone-200 px-3 py-2">รวม</td>
-              <td className="border-t border-stone-200" />
-              <td className="border-t border-stone-200 px-3 py-2 text-right">{totalQty}</td>
-              <td className="border-t border-stone-200" colSpan={2} />
-              <td className="border-t border-stone-200 px-3 py-2 text-right">{baht(totalValue)} ฿</td>
+            <tr>
+              <td>รวม</td>
+              <td />
+              <td className="text-right">{totalQty}</td>
+              <td colSpan={2} />
+              <td className="text-right text-base">{baht(totalValue)} ฿</td>
             </tr>
           </tfoot>
         </table>
       </div>
-      <p className="text-sm text-stone-500">
-        ตัวเลขสีส้ม = ใกล้หมด, สีแดงติดลบ = ขายไปก่อนบันทึกของเข้า (ควรเพิ่ม stock หรือเช็คของจริง)
+      <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-stone-500">
+        <span className="flex items-center gap-1.5">
+          <span className="size-2.5 rounded-full bg-orange-400" /> ใกล้หมด
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="size-2.5 rounded-full bg-red-500" /> ติดลบ = ขายไปก่อนบันทึกของเข้า (ควรเพิ่ม stock หรือเช็คของจริง)
+        </span>
       </p>
     </div>
   );
