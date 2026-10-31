@@ -19,7 +19,7 @@ export function AppHeader({ profile }: { profile: Profile }) {
           )}
           <span className="text-stone-600">{profile.display_name}</span>
           <form action={logout}>
-            <button className="btn px-2 py-1.5 text-stone-500 hover:text-stone-800">ออก</button>
+            <button className="btn px-2 py-1.5 text-stone-500 hover:text-stone-800">ออกจากระบบ</button>
           </form>
         </div>
       </div>

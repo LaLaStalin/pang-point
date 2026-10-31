@@ -4,7 +4,9 @@ import { RefreshButton } from "@/components/RefreshButton";
 import { baht, dayRange, fmtDate, fmtTime, parseDateParam } from "@/lib/format";
 import { getNameMaps } from "@/lib/lookups";
 import { createClient } from "@/lib/supabase/server";
-import { PAYMENT_LABEL, PRICE_TYPE_LABEL, type Sale } from "@/lib/types";
+import { PAYMENT_LABEL, PRICE_TYPE_LABEL, type Sale, type SalesSummary } from "@/lib/types";
+
+const PAGE_SIZE = 100;
 
 export default async function SalesPage({
   searchParams,
@@ -15,21 +17,28 @@ export default async function SalesPage({
   const from = parseDateParam(sp.from);
   const to = parseDateParam(sp.to ?? sp.from);
   const range = dayRange(from, to);
+  const page = Math.max(1, Math.floor(Number(sp.page)) || 1);
+  const pageHref = (p: number) => `?${new URLSearchParams({ from, to, page: String(p) })}`;
 
   const supabase = await createClient();
-  const [{ data, error }, names] = await Promise.all([
+  // ยอดรวมคิดในฐานข้อมูลจากทุกบิลในช่วง ตารางดึงแค่ทีละหน้า
+  const [{ data, error }, { data: summaryData, error: summaryError }, names] = await Promise.all([
     supabase
       .from("sales")
       .select("*")
       .gte("sold_at", range.from)
       .lt("sold_at", range.to)
       .order("sold_at", { ascending: false })
-      .limit(1000),
+      .order("id", { ascending: false })
+      .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1),
+    supabase.rpc("sales_summary", { p_from: range.from, p_to: range.to }),
     getNameMaps(supabase),
   ]);
   if (error) throw new Error(error.message);
+  if (summaryError) throw new Error(summaryError.message);
   const sales = (data ?? []) as Sale[];
-  const completed = sales.filter((s) => s.status === "completed");
+  const summary = summaryData as SalesSummary;
+  const pageCount = Math.max(1, Math.ceil((summary.bill_count + summary.void_count) / PAGE_SIZE));
 
   return (
     <div className="space-y-4">
@@ -39,8 +48,8 @@ export default async function SalesPage({
       </div>
       <DateRangeFilter from={from} to={to} />
       <p className="text-stone-600">
-        {completed.length} บิล · {completed.reduce((s, x) => s + x.total_qty, 0)} ชิ้น ·{" "}
-        <b>{baht(completed.reduce((s, x) => s + Number(x.total_amount), 0))} บาท</b>
+        {summary.bill_count} บิล · {summary.total_qty} ชิ้น · <b>{baht(summary.revenue)} บาท</b>
+        {summary.void_count > 0 && <span className="text-stone-400"> · ยกเลิก {summary.void_count} บิล</span>}
       </p>
 
       <div className="table-wrap">
@@ -96,6 +105,28 @@ export default async function SalesPage({
           </tbody>
         </table>
       </div>
+
+      {pageCount > 1 && (
+        <nav className="flex items-center justify-center gap-3">
+          {page > 1 ? (
+            <Link href={pageHref(page - 1)} className="btn-ghost">
+              ← ก่อนหน้า
+            </Link>
+          ) : (
+            <span className="btn-ghost pointer-events-none opacity-40">← ก่อนหน้า</span>
+          )}
+          <span className="text-stone-600">
+            หน้า {page} / {pageCount}
+          </span>
+          {page < pageCount ? (
+            <Link href={pageHref(page + 1)} className="btn-ghost">
+              ถัดไป →
+            </Link>
+          ) : (
+            <span className="btn-ghost pointer-events-none opacity-40">ถัดไป →</span>
+          )}
+        </nav>
+      )}
     </div>
   );
 }

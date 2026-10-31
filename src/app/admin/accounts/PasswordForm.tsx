@@ -12,6 +12,7 @@ export function PasswordForm({ account, title, hint }: { account: Account; title
 
   const mismatch = confirm !== "" && password !== confirm;
   const canSubmit = password.length >= 6 && password === confirm;
+  const digitsOnly = (v: string) => v.replace(/\D/g, "");
 
   function submit() {
     setMessage(null);
@@ -35,13 +36,15 @@ export function PasswordForm({ account, title, hint }: { account: Account; title
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <label>
-          <span className="label">รหัสใหม่ (อย่างน้อย 6 ตัว)</span>
+          <span className="label">รหัสใหม่ (ตัวเลขอย่างน้อย 6 หลัก)</span>
           <input
             className="input"
             type="password"
+            inputMode="numeric"
+            pattern="[0-9]*"
             autoComplete="new-password"
             value={password}
-            onChange={(e) => setPasswordValue(e.target.value)}
+            onChange={(e) => setPasswordValue(digitsOnly(e.target.value))}
           />
         </label>
         <label>
@@ -49,9 +52,11 @@ export function PasswordForm({ account, title, hint }: { account: Account; title
           <input
             className="input"
             type="password"
+            inputMode="numeric"
+            pattern="[0-9]*"
             autoComplete="new-password"
             value={confirm}
-            onChange={(e) => setConfirm(e.target.value)}
+            onChange={(e) => setConfirm(digitsOnly(e.target.value))}
           />
         </label>
       </div>

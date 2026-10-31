@@ -4,7 +4,6 @@ import { createClient } from "@/lib/supabase/server";
 import type { Product } from "@/lib/types";
 
 type Purchase = {
-  supplier: string | null;
   product_id: number;
   unit_cost: number;
   qty: number;
@@ -12,27 +11,49 @@ type Purchase = {
   created_at: string;
 };
 
+type SupplierRow = { supplier: string | null; rounds: number; qty: number; cost: number; last_at: string };
+type ProductRow = { product_id: number; qty: number; cost: number; min_cost: number; max_cost: number };
+
 const NO_SUPPLIER = "(ไม่ระบุร้าน)";
+// รายการรอบการซื้อของร้านที่เลือก ดึงเฉพาะล่าสุด (ยอดรวมด้านบนคิดจากทั้งหมดในฐานข้อมูล)
+const ROUND_LINES = 300;
 
 export default async function SuppliersPage({ searchParams }: { searchParams: Promise<{ s?: string }> }) {
   const { s: selected } = await searchParams;
+  // ชื่อ "(ไม่ระบุร้าน)" ในหน้าเว็บ = supplier เป็น null ในฐานข้อมูล
+  const supplierParam = selected === NO_SUPPLIER ? null : (selected ?? null);
 
   const supabase = await createClient();
-  const [{ data, error }, { data: products }] = await Promise.all([
-    supabase
-      .from("stock_purchases")
-      .select("supplier, product_id, unit_cost, qty, note, created_at")
-      .order("created_at", { ascending: false })
-      .order("id")
-      .limit(5000),
+  let roundsQuery = supabase
+    .from("stock_purchases")
+    .select("product_id, unit_cost, qty, note, created_at")
+    .order("created_at", { ascending: false })
+    .order("id")
+    .limit(ROUND_LINES);
+  roundsQuery = supplierParam === null ? roundsQuery.is("supplier", null) : roundsQuery.eq("supplier", supplierParam);
+
+  const [{ data, error }, { data: products }, byProductRes, roundsRes] = await Promise.all([
+    supabase.rpc("supplier_summary"),
     supabase.from("products").select("*"),
+    selected ? supabase.rpc("supplier_product_summary", { p_supplier: supplierParam }) : null,
+    selected ? roundsQuery : null,
   ]);
   if (error) throw new Error(error.message);
-  const purchases = ((data ?? []) as Purchase[]).map((p) => ({
-    ...p,
-    supplier: p.supplier ?? NO_SUPPLIER,
-    unit_cost: Number(p.unit_cost),
+  if (byProductRes?.error) throw new Error(byProductRes.error.message);
+  if (roundsRes?.error) throw new Error(roundsRes.error.message);
+
+  const summary = ((data ?? []) as SupplierRow[]).map((r) => ({
+    ...r,
+    supplier: r.supplier ?? NO_SUPPLIER,
+    cost: Number(r.cost),
   }));
+  const byProduct = ((byProductRes?.data ?? []) as ProductRow[]).map((r) => ({
+    ...r,
+    cost: Number(r.cost),
+    min_cost: Number(r.min_cost),
+    max_cost: Number(r.max_cost),
+  }));
+  const purchases = ((roundsRes?.data ?? []) as Purchase[]).map((p) => ({ ...p, unit_cost: Number(p.unit_cost) }));
 
   const productById = new Map(((products ?? []) as Product[]).map((p) => [p.id, p]));
   const label = (id: number) => {
@@ -41,32 +62,12 @@ export default async function SuppliersPage({ searchParams }: { searchParams: Pr
     return p.kind === "tier" ? `${baht(p.wholesale_price)}/${baht(p.retail_price)}` : `อื่นๆ ${baht(p.retail_price)}`;
   };
 
-  // สรุปรายร้าน (รายการเรียงจากล่าสุดอยู่แล้ว ร้านแรกที่เจอจึงเป็นร้านที่ซื้อล่าสุด)
-  const summary = new Map<string, { rounds: Set<string>; qty: number; cost: number; last: string }>();
-  for (const p of purchases) {
-    const row = summary.get(p.supplier) ?? { rounds: new Set(), qty: 0, cost: 0, last: p.created_at };
-    row.rounds.add(p.created_at);
-    row.qty += p.qty;
-    row.cost += p.qty * p.unit_cost;
-    summary.set(p.supplier, row);
-  }
-
-  const mine = selected ? purchases.filter((p) => p.supplier === selected) : [];
-
   // แต่ละรอบการซื้อ = บรรทัดที่บันทึกพร้อมกัน (created_at เดียวกัน)
   const rounds = new Map<string, Purchase[]>();
-  for (const p of mine) rounds.set(p.created_at, [...(rounds.get(p.created_at) ?? []), p]);
-
-  // สรุปรายชนิดของร้านนี้: รวมกี่ชิ้น ทุนต่ำสุด/สูงสุด/เฉลี่ย
-  const byProduct = new Map<number, { qty: number; cost: number; min: number; max: number }>();
-  for (const p of mine) {
-    const row = byProduct.get(p.product_id) ?? { qty: 0, cost: 0, min: Infinity, max: -Infinity };
-    row.qty += p.qty;
-    row.cost += p.qty * p.unit_cost;
-    row.min = Math.min(row.min, p.unit_cost);
-    row.max = Math.max(row.max, p.unit_cost);
-    byProduct.set(p.product_id, row);
-  }
+  for (const p of purchases) rounds.set(p.created_at, [...(rounds.get(p.created_at) ?? []), p]);
+  // ดึงมาครบเพดาน = รอบสุดท้ายอาจได้มาไม่ครบทุกบรรทัด ตัดทิ้งไป
+  const truncated = purchases.length === ROUND_LINES;
+  if (truncated && rounds.size > 1) rounds.delete([...rounds.keys()].at(-1)!);
 
   return (
     <div className="space-y-4">
@@ -84,20 +85,23 @@ export default async function SuppliersPage({ searchParams }: { searchParams: Pr
             </tr>
           </thead>
           <tbody>
-            {[...summary].map(([name, row]) => (
-              <tr key={name} className={name === selected ? "bg-amber-50" : undefined}>
+            {summary.map((row) => (
+              <tr key={row.supplier} className={row.supplier === selected ? "bg-amber-50" : undefined}>
                 <td>
-                  <Link href={`?s=${encodeURIComponent(name)}`} className="font-semibold text-amber-700 underline">
-                    {name}
+                  <Link
+                    href={`?s=${encodeURIComponent(row.supplier)}`}
+                    className="font-semibold text-amber-500 underline hover:text-amber-600"
+                  >
+                    {row.supplier}
                   </Link>
                 </td>
-                <td className="text-right">{row.rounds.size}</td>
+                <td className="text-right">{row.rounds}</td>
                 <td className="text-right">{row.qty}</td>
                 <td className="text-right font-semibold">{baht(row.cost)}</td>
-                <td>{fmtDate(row.last)}</td>
+                <td>{fmtDate(row.last_at)}</td>
               </tr>
             ))}
-            {summary.size === 0 && (
+            {summary.length === 0 && (
               <tr>
                 <td colSpan={5} className="py-6 text-center text-stone-500">
                   ยังไม่มีประวัติการซื้อ
@@ -125,12 +129,12 @@ export default async function SuppliersPage({ searchParams }: { searchParams: Pr
                 </tr>
               </thead>
               <tbody>
-                {[...byProduct].map(([id, row]) => (
-                  <tr key={id}>
-                    <td className="font-semibold">{label(id)}</td>
+                {byProduct.map((row) => (
+                  <tr key={row.product_id}>
+                    <td className="font-semibold">{label(row.product_id)}</td>
                     <td className="text-right">{row.qty}</td>
-                    <td className="text-right">{baht(row.min)}</td>
-                    <td className="text-right">{baht(row.max)}</td>
+                    <td className="text-right">{baht(row.min_cost)}</td>
+                    <td className="text-right">{baht(row.max_cost)}</td>
                     <td className="text-right">{baht(Math.round((row.cost / row.qty) * 100) / 100)}</td>
                     <td className="text-right font-semibold">{baht(row.cost)}</td>
                   </tr>
@@ -164,6 +168,7 @@ export default async function SuppliersPage({ searchParams }: { searchParams: Pr
               </section>
             ))}
           </div>
+          {truncated && <p className="text-sm text-stone-500">แสดงเฉพาะรอบการซื้อล่าสุด</p>}
         </>
       )}
     </div>
