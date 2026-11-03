@@ -89,3 +89,10 @@ export const ADJUST_REASON_LABEL: Record<AdjustReason, string> = {
   expired: "หมดอายุ",
   other: "อื่นๆ",
 };
+
+export const ADJUST_REASON_ICON: Record<AdjustReason, string> = {
+  damaged: "⚠️",
+  tasting: "😋",
+  expired: "⏳",
+  other: "📝",
+};

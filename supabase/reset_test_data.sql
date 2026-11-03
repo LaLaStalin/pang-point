@@ -12,6 +12,7 @@ truncate table
   public.sale_items,
   public.sales,
   public.stock_purchases,
+  public.stock_adjustment_requests,
   public.stock_adjustments,
   public.product_costs,
   public.products,
@@ -25,6 +26,7 @@ restart identity;
 --   public.sale_items,
 --   public.sales,
 --   public.stock_purchases,
+--   public.stock_adjustment_requests,
 --   public.stock_adjustments,
 --   public.suppliers
 -- restart identity;

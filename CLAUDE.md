@@ -23,7 +23,7 @@ Database changes: add a new timestamped file in `supabase/migrations/` (never ed
 ## Architecture
 
 ### Two accounts, security enforced in the database
-- Only two Supabase Auth users exist: `shop@pangpoint.local` (role `staff`, sells only) and `admin@pangpoint.local` (role `admin`). Emails are internal account names, never sent to. Login page picks the account and asks only for a password (`ACCOUNT_EMAIL` in [src/lib/auth.ts](src/lib/auth.ts)). Public sign-up is disabled.
+- Only two Supabase Auth users exist: `shop@pangpoint.local` (role `staff`, sells and requests waste/tasting adjustments only) and `admin@pangpoint.local` (role `admin`). Emails are internal account names, never sent to. Login page picks the account and asks only for a password (`ACCOUNT_EMAIL` in [src/lib/auth.ts](src/lib/auth.ts)). Public sign-up is disabled.
 - `profiles.role` is the source of truth. RLS policies use `public.is_admin()`; staff cannot read costs, sales, history or purchases even via direct API calls. Treat RLS + DB functions as the real security boundary; the app-side checks are UX.
 - Costs live in a separate admin-only table `product_costs`; admins read products with cost through the `products_admin` view (`security_invoker`). Staff read `products` directly (no cost column).
 
@@ -33,6 +33,7 @@ Business logic lives in `security definer` plpgsql functions, not in TypeScript:
 Key rules implemented there:
 - `create_sale` reads prices from the DB; never trust client-sent prices. One bill is entirely retail or entirely wholesale.
 - Selling is allowed even when stock goes negative (UI shows a warning).
+- Staff stock adjustments are requests (`request_stock_adjustment`): stock changes only when an admin approves (`approve_stock_adjustment_request`). Admins adjust immediately with `adjust_stock`.
 - Cost = weighted average cost per product, recalculated only on `add_stock`; sales and adjustments snapshot `unit_cost` at that moment.
 - Product `kind`: `tier` (fixed retail/wholesale price groups, e.g. ขนมแห้ง 15/14, ขนมปัง 20/16) vs `other` (one product row per full price, e.g. "อื่นๆ 80 บาท"; price unique among `other`, including hidden rows).
 

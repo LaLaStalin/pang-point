@@ -14,6 +14,7 @@ import {
 import { getNameMaps } from "@/lib/lookups";
 import { createClient } from "@/lib/supabase/server";
 import { ADJUST_REASON_LABEL, type AdjustReason } from "@/lib/types";
+import { EditAdjustReason } from "../EditAdjustReason";
 
 type Movement = {
   kind: string;
@@ -25,6 +26,7 @@ type Movement = {
   user_id: string;
   sale_id: number | null;
   supplier: string | null;
+  adjustment_id: number | null;
 };
 
 const FILTERS = [
@@ -125,7 +127,17 @@ export default async function StockHistoryPage({
                   <td>{fmtDate(r.at)}</td>
                   <td>{fmtTime(r.at)}</td>
                   <td>
-                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${k.cls}`}>{k.text}</span>
+                    {r.adjustment_id ? (
+                      <EditAdjustReason
+                        adjustmentId={r.adjustment_id}
+                        reason={r.kind.replace("adjust_", "") as AdjustReason}
+                        productName={names.productName.get(r.product_id) ?? ""}
+                        qty={-r.qty_change}
+                        note={r.note}
+                      />
+                    ) : (
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${k.cls}`}>{k.text}</span>
+                    )}
                   </td>
                   <td>{names.productName.get(r.product_id)}</td>
                   <td className={`text-right font-semibold ${r.qty_change > 0 ? "text-emerald-700" : "text-red-700"}`}>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AppHeader } from "@/components/AppHeader";
+import { ShopNav } from "@/components/ShopNav";
 import { requireProfile } from "@/lib/auth";
 
 export default async function HomePage() {
@@ -8,6 +9,7 @@ export default async function HomePage() {
   return (
     <>
       <AppHeader profile={profile} />
+      <ShopNav active="/" />
       <main className="mx-auto flex max-w-3xl flex-col px-4 py-6">
         <h1 className="mb-1 text-center text-2xl font-bold">เจ๊แหม่มสับปะรด</h1>
         <p className="mb-8 text-center text-stone-500">เลือกราคาของบิลนี้</p>

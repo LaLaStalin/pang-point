@@ -18,7 +18,7 @@ const LINKS = [
   { href: "/admin/accounts", label: "รหัสผ่าน" },
 ];
 
-export function AdminNav() {
+export function AdminNav({ pendingAdjustRequests }: { pendingAdjustRequests: number }) {
   const pathname = usePathname();
   // เมนูที่เพิ่งกด — ไฮไลต์ทันทีไม่ต้องรอหน้าโหลดเสร็จ (ใช้ได้เฉพาะตอนยังอยู่หน้าเดิมที่กด)
   const [clicked, setClicked] = useState<{ href: string; from: string } | null>(null);
@@ -41,6 +41,11 @@ export function AdminNav() {
               }`}
             >
               {l.label}
+              {l.href === "/admin/stock/adjust" && pendingAdjustRequests > 0 && (
+                <span className="ml-1.5 inline-flex min-w-5 justify-center rounded-full bg-red-600 px-1.5 text-xs font-bold text-white">
+                  {pendingAdjustRequests}
+                </span>
+              )}
               <PendingIndicator />
             </Link>
           );
