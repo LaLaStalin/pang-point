@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { AdjustForm } from "@/components/AdjustForm";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { DateRangeFilter } from "@/components/DateRangeFilter";
 import {
@@ -13,8 +12,8 @@ import {
 } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 import type { AdjustReason, ProductWithCost } from "@/lib/types";
-import { adjustStock } from "../actions";
 import { EditAdjustReason } from "../EditAdjustReason";
+import { AdjustBatchForm } from "./AdjustBatchForm";
 import { AdjustRequests } from "./AdjustRequests";
 
 const REQUESTS_PER_PAGE = 10;
@@ -148,9 +147,9 @@ export default async function AdjustPage({
       <section className="space-y-3">
         <div>
           <h2 className="text-lg font-bold">แอดมินตัด stock เอง</h2>
-          <p className="text-sm text-stone-500">กดยืนยันแล้ว stock ลดทันที ไม่ต้องรออนุมัติ</p>
+          <p className="text-sm text-stone-500">เลือกได้หลายรายการ กดยืนยันแล้ว stock ลดทันที ไม่ต้องรออนุมัติ</p>
         </div>
-        <AdjustForm products={(products ?? []) as ProductWithCost[]} action={adjustStock} />
+        <AdjustBatchForm products={(products ?? []) as ProductWithCost[]} />
       </section>
 
       <section>

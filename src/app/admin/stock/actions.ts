@@ -44,20 +44,13 @@ export async function updateAdjustmentReason(adjustmentId: number, reason: Adjus
   return { ok: true };
 }
 
-export async function adjustStock(input: {
-  product_id: number;
-  qty: number;
-  reason: AdjustReason;
-  note: string;
-}): Promise<ActionResult> {
+export async function adjustStockBatch(
+  lines: { product_id: number; qty: number; reason: AdjustReason }[],
+  note: string,
+): Promise<ActionResult> {
   await requireAdmin();
   const supabase = await createClient();
-  const { error } = await supabase.rpc("adjust_stock", {
-    p_product_id: input.product_id,
-    p_qty: input.qty,
-    p_reason: input.reason,
-    p_note: input.note,
-  });
+  const { error } = await supabase.rpc("adjust_stock_batch", { p_lines: lines, p_note: note });
   if (error) return { ok: false, error: error.message };
   revalidatePath("/admin", "layout");
   return { ok: true };

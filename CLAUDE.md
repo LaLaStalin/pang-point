@@ -33,7 +33,7 @@ Business logic lives in `security definer` plpgsql functions, not in TypeScript:
 Key rules implemented there:
 - `create_sale` reads prices from the DB; never trust client-sent prices. One bill is entirely retail or entirely wholesale.
 - Selling is allowed even when stock goes negative (UI shows a warning).
-- Staff stock adjustments are requests (`request_stock_adjustment`): stock changes only when an admin approves (`approve_stock_adjustment_request`). Admins adjust immediately with `adjust_stock`.
+- Staff stock adjustments are requests (`request_stock_adjustment`): stock changes only when an admin approves (`approve_stock_adjustment_request`). Admins adjust immediately with `adjust_stock_batch` (several lines, all or nothing).
 - Cost = weighted average cost per product, recalculated only on `add_stock`; sales and adjustments snapshot `unit_cost` at that moment.
 - Product `kind`: `tier` (fixed retail/wholesale price groups, e.g. ขนมแห้ง 15/14, ขนมปัง 20/16) vs `other` (one product row per full price, e.g. "อื่นๆ 80 บาท"; price unique among `other`, including hidden rows).
 
