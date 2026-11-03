@@ -15,7 +15,7 @@ export default async function AddStockPage() {
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">เพิ่ม stock</h1>
       <p className="text-stone-600">
-        กรอกต้นทุนต่อชิ้นและจำนวนที่ซื้อมา ถ้ากลุ่มเดียวกันมีหลายต้นทุนให้กด “+ เพิ่มต้นทุนอื่น” ระบบจะคิดต้นทุนเฉลี่ยให้เอง
+        เลือกร้านและราคาที่จะขาย แล้วกรอกต้นทุนต่อชิ้นกับจำนวน ถ้ากลุ่มเดียวกันมีหลายต้นทุนให้กด “+ เพิ่มต้นทุนอื่น” ระบบจะคิดต้นทุนเฉลี่ยให้เอง
       </p>
       <AddStockForm products={(data ?? []) as ProductWithCost[]} suppliers={suppliers} />
     </div>

@@ -15,6 +15,8 @@ export function AddStockForm({ products, suppliers }: { products: ProductWithCos
   const [lines, setLines] = useState<Record<number, Line[]>>(() =>
     Object.fromEntries(products.map((p) => [p.id, [emptyLine()]])),
   );
+  // ราคาที่จะกรอกรอบนี้ — ยกเลิกแล้วค่าที่กรอกยังเก็บอยู่ใน lines แต่ไม่ถูกนำไปบันทึก
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [supplier, setSupplier] = useState("");
   const [typingNew, setTypingNew] = useState(suppliers.length === 0);
   const [note, setNote] = useState("");
@@ -22,7 +24,8 @@ export function AddStockForm({ products, suppliers }: { products: ProductWithCos
   const [pending, startTransition] = useTransition();
 
   const valid = (l: Line) => l.qty !== "" && Number(l.qty) > 0 && l.cost !== "" && Number(l.cost) >= 0;
-  const payload = products.flatMap((p) =>
+  const selectedProducts = products.filter((p) => selectedIds.includes(p.id));
+  const payload = selectedProducts.flatMap((p) =>
     (lines[p.id] ?? []).filter(valid).map((l) => ({
       product_id: p.id,
       unit_cost: Number(l.cost),
@@ -31,6 +34,10 @@ export function AddStockForm({ products, suppliers }: { products: ProductWithCos
   );
   const grandQty = payload.reduce((s, l) => s + l.qty, 0);
   const grandCost = payload.reduce((s, l) => s + l.qty * l.unit_cost, 0);
+
+  function togglePrice(productId: number) {
+    setSelectedIds((ids) => (ids.includes(productId) ? ids.filter((id) => id !== productId) : [...ids, productId]));
+  }
 
   function update(productId: number, key: number, patch: Partial<Line>) {
     setLines((all) => ({
@@ -57,6 +64,7 @@ export function AddStockForm({ products, suppliers }: { products: ProductWithCos
       if (res.ok) {
         setMessage({ ok: true, text: `บันทึกแล้ว (${supplier.trim()}) ${grandQty} ชิ้น ต้นทุนรวม ${baht(grandCost)} บาท` });
         setLines(Object.fromEntries(products.map((p) => [p.id, [emptyLine()]])));
+        setSelectedIds([]);
         setSupplier("");
         setTypingNew(false);
         setNote("");
@@ -113,7 +121,24 @@ export function AddStockForm({ products, suppliers }: { products: ProductWithCos
         )}
       </div>
 
-      {products.map((p) => {
+      <div className="card space-y-3">
+        <div className="label">ขายราคาไหนบ้าง? (เลือกได้หลายราคา)</div>
+        <div className="flex flex-wrap gap-2">
+          {products.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              aria-pressed={selectedIds.includes(p.id)}
+              className={`btn px-4 py-2 ${selectedIds.includes(p.id) ? "bg-amber-500 text-white" : "bg-white text-stone-700 ring-1 ring-stone-300"}`}
+              onClick={() => togglePrice(p.id)}
+            >
+              {p.kind === "tier" ? `${p.name} ${baht(p.wholesale_price)}/${baht(p.retail_price)}` : p.name}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {selectedProducts.map((p) => {
         const valids = (lines[p.id] ?? []).filter(valid);
         const addQty = valids.reduce((s, l) => s + Number(l.qty), 0);
         const addCost = valids.reduce((s, l) => s + Number(l.qty) * Number(l.cost), 0);
