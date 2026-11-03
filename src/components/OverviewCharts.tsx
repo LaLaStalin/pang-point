@@ -5,7 +5,7 @@ import type { SalesSummary } from "@/lib/types";
 export type DailySales = { day: string; revenue: number; cost: number; bills: number };
 
 /** ปัดค่าสูงสุดของแกนให้เป็นเลขกลมๆ (100, 250, 500, 1,000, 2,500 ...) */
-function niceMax(v: number) {
+export function niceMax(v: number) {
   if (v <= 0) return 100;
   const p = 10 ** Math.floor(Math.log10(v));
   const step = [1, 2, 2.5, 5, 10].find((s) => s * p >= v) ?? 10;
@@ -14,7 +14,7 @@ function niceMax(v: number) {
 
 const compact = (n: number) => (n >= 10_000 ? `${baht(Math.round(n / 100) / 10)}K` : baht(n));
 
-const TH_DAY = ["อา", "จ", "อ", "พ", "พฤ", "ศ", "ส"];
+export const TH_DAY = ["อา", "จ", "อ", "พ", "พฤ", "ศ", "ส"];
 
 /** กราฟแท่งยอดขายรายวัน — วางเมาส์/แตะแท่งเพื่อดูยอด กำไร และจำนวนบิล */
 export function DailySalesChart({

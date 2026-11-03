@@ -1,3 +1,4 @@
+import dayjs from "dayjs";
 import Link from "next/link";
 import { DateRangeFilter } from "@/components/DateRangeFilter";
 import { RefreshButton } from "@/components/RefreshButton";
@@ -15,6 +16,7 @@ import { getNameMaps } from "@/lib/lookups";
 import { createClient } from "@/lib/supabase/server";
 import { ADJUST_REASON_LABEL, type AdjustReason } from "@/lib/types";
 import { EditAdjustReason } from "../EditAdjustReason";
+import { StockDailyCharts, type DailyMovement } from "./StockDailyCharts";
 
 type Movement = {
   kind: string;
@@ -81,8 +83,18 @@ export default async function StockHistoryPage({
   if (kind === "adjust") query = query.like("kind", "adjust_%");
   else if (kind !== "all") query = query.eq("kind", kind);
 
-  const [{ data, error }, names] = await Promise.all([query, getNameMaps(supabase)]);
+  // กราฟแสดงอย่างน้อย 14 วันถึงวันสุดท้ายที่เลือก เพื่อให้เทียบวันอื่นได้ แม้ค้นหาแค่วันเดียว (ยาวสุด 1 ปี)
+  const minChartFrom = dayjs(to).subtract(13, "day").format("YYYY-MM-DD");
+  const maxChartFrom = dayjs(to).subtract(365, "day").format("YYYY-MM-DD");
+  const chartFrom = from < maxChartFrom ? maxChartFrom : from < minChartFrom ? from : minChartFrom;
+
+  const [{ data, error }, names, { data: daily, error: dailyError }] = await Promise.all([
+    query,
+    getNameMaps(supabase),
+    supabase.rpc("daily_stock_movements", { p_from: chartFrom, p_to: to }),
+  ]);
   if (error) throw new Error(error.message);
+  if (dailyError) console.error("daily_stock_movements:", dailyError.message);
   const hasNext = (data ?? []).length > PAGE_SIZE;
   const rows = ((data ?? []) as Movement[]).slice(0, PAGE_SIZE);
 
@@ -188,6 +200,13 @@ export default async function StockHistoryPage({
           )}
         </nav>
       )}
+
+      <StockDailyCharts
+        key={`${chartFrom}-${to}`}
+        data={(daily ?? []) as DailyMovement[]}
+        initialDay={to}
+        failed={!!dailyError}
+      />
     </div>
   );
 }
