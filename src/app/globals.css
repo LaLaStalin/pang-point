@@ -98,6 +98,20 @@ input[type="number"] {
   .table tfoot td {
     @apply border-t border-stone-200 bg-stone-100 px-4 py-3.5 font-bold text-stone-900;
   }
+  /* หน้า login พอดีจอเสมอ: ย่อระยะ/ขนาดปุ่มทั้งหน้าตามความสูงจอ (ตัวอักษรคงขนาดเดิม)
+     ถ้าแก้ขนาดในหน้า login ต้องแก้เลขนี้ด้วย: ความสูงตัวอักษรรวม 6.25rem + ระยะรวม 153 หน่วย spacing */
+  .login-fit {
+    --spacing: min(0.25rem, (100dvh - 6.25rem) / 153);
+  }
+  /* มือถือแนวนอนจอเตี้ยมาก: ซ่อนโลโก้/ชื่อร้าน เหลือที่ให้แป้นตัวเลข */
+  @media (orientation: landscape) and (max-height: 500px) {
+    .login-fit {
+      --spacing: min(0.25rem, (100dvh - 3rem) / 128);
+    }
+    .login-header {
+      display: none;
+    }
+  }
   /* ป้ายตัวเลขในตาราง (คงเหลือ / สถานะ) */
   .pill {
     @apply inline-flex min-w-9 items-center justify-center rounded-full px-2.5 py-0.5 text-sm font-bold;

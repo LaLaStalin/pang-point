@@ -97,7 +97,7 @@ export function LoginForm() {
               key={k}
               type="button"
               onClick={() => press(k)}
-              className={`flex size-[4.5rem] items-center justify-center rounded-full transition select-none active:scale-95 ${
+              className={`flex size-18 items-center justify-center rounded-full transition select-none active:scale-95 ${
                 fn
                   ? "text-sm font-medium text-stone-400 hover:text-stone-700"
                   : "text-[1.75rem] font-medium text-stone-800 hover:bg-stone-100 active:bg-amber-100"
