@@ -54,11 +54,13 @@ export function SellFlow({
   priceType,
   products: initialProducts,
   promptpayId,
+  qrImageUrl,
   initialQty,
 }: {
   priceType: PriceType;
   products: Product[];
   promptpayId: string | null;
+  qrImageUrl: string | null;
   initialQty: Record<number, number>;
 }) {
   const router = useRouter();
@@ -328,7 +330,7 @@ export function SellFlow({
                   )}
                 </div>
               ) : (
-                <PromptPayQR promptpayId={promptpayId} amount={total} />
+                <PromptPayQR promptpayId={promptpayId} imageUrl={qrImageUrl} amount={total} />
               )}
 
               {error && (

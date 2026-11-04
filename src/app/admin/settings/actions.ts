@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { QR_IMAGE_BUCKET, type QrMethod } from "@/lib/types";
 import type { ActionResult } from "../stock/actions";
 
 function done(error: { message: string; code?: string } | null, duplicate = "มีราคานี้อยู่แล้ว"): ActionResult {
@@ -16,17 +17,34 @@ function done(error: { message: string; code?: string } | null, duplicate = "ม
 
 const otherName = (price: number) => `อื่นๆ ${price} บาท`;
 
-export async function savePromptpay(promptpayId: string): Promise<ActionResult> {
+export async function saveQrSettings(input: {
+  method: QrMethod;
+  promptpayId: string;
+  imagePath: string | null;
+}): Promise<ActionResult> {
   await requireAdmin();
-  const id = promptpayId.replace(/[^0-9]/g, "");
+  const id = input.promptpayId.replace(/[^0-9]/g, "");
   if (id && ![10, 13, 15].includes(id.length)) {
     return { ok: false, error: "เลขพร้อมเพย์ต้องเป็นเบอร์โทร 10 หลัก หรือเลขบัตร/ภาษี 13 หลัก" };
   }
+  if (input.method === "image" && !input.imagePath) {
+    return { ok: false, error: "เลือกรูป QR ก่อนบันทึก" };
+  }
   const supabase = await createClient();
+  const { data: current } = await supabase.from("settings").select("qr_image_path").single();
   const { error } = await supabase
     .from("settings")
-    .update({ promptpay_id: id || null, updated_at: new Date().toISOString() })
+    .update({
+      qr_method: input.method,
+      promptpay_id: id || null,
+      qr_image_path: input.imagePath,
+      updated_at: new Date().toISOString(),
+    })
     .eq("id", 1);
+  // ลบรูปเก่าที่ถูกแทนที่ ถ้าลบไม่สำเร็จก็ไม่กระทบการใช้งาน
+  if (!error && current?.qr_image_path && current.qr_image_path !== input.imagePath) {
+    await supabase.storage.from(QR_IMAGE_BUCKET).remove([current.qr_image_path]);
+  }
   return done(error);
 }
 

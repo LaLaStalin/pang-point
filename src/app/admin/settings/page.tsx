@@ -1,9 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
-import type { Product } from "@/lib/types";
+import { QR_IMAGE_BUCKET, type Product } from "@/lib/types";
 import {
   AddTierProductForm,
   OtherProductsForm,
-  PromptpayForm,
+  QrSettingsForm,
   SuppliersForm,
   TierProductForm,
   type Supplier,
@@ -13,7 +13,7 @@ export default async function SettingsPage() {
   const supabase = await createClient();
   const [{ data: products }, { data: settings }, { data: suppliers }] = await Promise.all([
     supabase.from("products").select("*").order("sort_order").order("retail_price"),
-    supabase.from("settings").select("promptpay_id").single(),
+    supabase.from("settings").select("qr_method, promptpay_id, qr_image_path").single(),
     supabase.from("suppliers").select("id, name, is_active").order("name"),
   ]);
   const all = (products ?? []) as Product[];
@@ -44,8 +44,17 @@ export default async function SettingsPage() {
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-bold">พร้อมเพย์</h2>
-        <PromptpayForm initial={settings?.promptpay_id ?? ""} />
+        <h2 className="text-lg font-bold">QR รับเงิน</h2>
+        <QrSettingsForm
+          initial={{
+            method: settings?.qr_method === "image" ? "image" : "promptpay",
+            promptpayId: settings?.promptpay_id ?? "",
+            imagePath: settings?.qr_image_path ?? null,
+            imageUrl: settings?.qr_image_path
+              ? supabase.storage.from(QR_IMAGE_BUCKET).getPublicUrl(settings.qr_image_path).data.publicUrl
+              : null,
+          }}
+        />
       </section>
     </div>
   );

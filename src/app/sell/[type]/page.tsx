@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import type { PriceType, Product } from "@/lib/types";
+import { QR_IMAGE_BUCKET, type PriceType, type Product } from "@/lib/types";
 import { SellFlow } from "./SellFlow";
 
 export default async function SellPage({
@@ -23,14 +23,19 @@ export default async function SellPage({
       .eq("is_active", true)
       .order("sort_order")
       .order("retail_price"),
-    supabase.from("settings").select("promptpay_id").single(),
+    supabase.from("settings").select("qr_method, promptpay_id, qr_image_path").single(),
   ]);
+  // ส่งเฉพาะข้อมูลของแบบที่แอดมินเลือก
+  const isImage = settings?.qr_method === "image" && settings.qr_image_path;
 
   return (
     <SellFlow
       priceType={type as PriceType}
       products={(products ?? []) as Product[]}
-      promptpayId={settings?.promptpay_id ?? null}
+      promptpayId={isImage ? null : (settings?.promptpay_id ?? null)}
+      qrImageUrl={
+        isImage ? supabase.storage.from(QR_IMAGE_BUCKET).getPublicUrl(settings.qr_image_path).data.publicUrl : null
+      }
       initialQty={parseCart(cart)}
     />
   );

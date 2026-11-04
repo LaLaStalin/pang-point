@@ -2,6 +2,9 @@ export type UserRole = "admin" | "staff";
 export type ProductKind = "tier" | "other";
 export type PriceType = "retail" | "wholesale";
 export type PaymentMethod = "cash" | "promptpay";
+export type QrMethod = "promptpay" | "image";
+// ที่เก็บรูป QR รับเงินใน Supabase Storage
+export const QR_IMAGE_BUCKET = "payment-qr";
 export type SaleStatus = "completed" | "void";
 export type AdjustReason = "damaged" | "tasting" | "expired" | "other";
 
