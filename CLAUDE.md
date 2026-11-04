@@ -35,6 +35,8 @@ Key rules implemented there:
 - Selling is allowed even when stock goes negative (UI shows a warning).
 - Staff stock adjustments are requests (`request_stock_adjustment`): stock changes only when an admin approves (`approve_stock_adjustment_request`). Admins adjust immediately with `adjust_stock_batch` (several lines, all or nothing).
 - Cost = weighted average cost per product, recalculated only on `add_stock`; sales and adjustments snapshot `unit_cost` at that moment.
+- Stock history reads `stock_movement_log`, an admin-only copy written only by triggers on `stock_purchases`, `sale_items`, `sales` (void) and `stock_adjustments`. The view `stock_movements` computes the same rows from the source tables; `supabase/check_stock_movement_log.sql` compares the two, and `supabase/test_stock_triggers.sql` exercises the triggers on a live database and rolls everything back by ending with an error. New one-off wipes must truncate the log too (`truncate` does not fire these triggers).
+- `sales_summary` and `sales_page_summary` reject ranges over 1 year; pages check `isRangeTooLong` first and show a notice instead of an error.
 - Product `kind`: `tier` (fixed retail/wholesale price groups, e.g. ขนมแห้ง 15/14, ขนมปัง 20/16) vs `other` (one product row per full price, e.g. "อื่นๆ 80 บาท"; price unique among `other`, including hidden rows).
 
 ### Next.js side

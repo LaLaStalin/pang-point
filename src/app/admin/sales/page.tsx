@@ -1,12 +1,15 @@
 import Link from "next/link";
 import { DateRangeFilter } from "@/components/DateRangeFilter";
+import { RangeTooLongNotice } from "@/components/RangeTooLongNotice";
 import { RefreshButton } from "@/components/RefreshButton";
-import { baht, dayRange, fmtDate, fmtTime, parseDateParam } from "@/lib/format";
+import { baht, dayRange, fmtDate, fmtTime, isRangeTooLong, parseDateParam } from "@/lib/format";
 import { getNameMaps } from "@/lib/lookups";
 import { createClient } from "@/lib/supabase/server";
-import { PAYMENT_LABEL, PRICE_TYPE_LABEL, type Sale, type SalesSummary } from "@/lib/types";
+import { PAYMENT_LABEL, PRICE_TYPE_LABEL, type Sale } from "@/lib/types";
 
 const PAGE_SIZE = 100;
+
+type SalesPageSummary = { bill_count: number; total_qty: number; revenue: number; void_count: number };
 
 export default async function SalesPage({
   searchParams,
@@ -20,6 +23,16 @@ export default async function SalesPage({
   const page = Math.max(1, Math.floor(Number(sp.page)) || 1);
   const pageHref = (p: number) => `?${new URLSearchParams({ from, to, page: String(p) })}`;
 
+  if (isRangeTooLong(from, to)) {
+    return (
+      <div className="space-y-4">
+        <h1 className="text-2xl font-bold">ประวัติรายการ</h1>
+        <DateRangeFilter from={from} to={to} />
+        <RangeTooLongNotice />
+      </div>
+    );
+  }
+
   const supabase = await createClient();
   // ยอดรวมคิดในฐานข้อมูลจากทุกบิลในช่วง ตารางดึงแค่ทีละหน้า
   const [{ data, error }, { data: summaryData, error: summaryError }, names] = await Promise.all([
@@ -31,13 +44,13 @@ export default async function SalesPage({
       .order("sold_at", { ascending: false })
       .order("id", { ascending: false })
       .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1),
-    supabase.rpc("sales_summary", { p_from: range.from, p_to: range.to }),
+    supabase.rpc("sales_page_summary", { p_from: range.from, p_to: range.to }),
     getNameMaps(supabase),
   ]);
   if (error) throw new Error(error.message);
   if (summaryError) throw new Error(summaryError.message);
   const sales = (data ?? []) as Sale[];
-  const summary = summaryData as SalesSummary;
+  const summary = summaryData as SalesPageSummary;
   const pageCount = Math.max(1, Math.ceil((summary.bill_count + summary.void_count) / PAGE_SIZE));
 
   return (

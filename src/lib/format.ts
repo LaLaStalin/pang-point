@@ -52,6 +52,11 @@ export function parseDateParam(v: string | string[] | undefined) {
   return s && /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : todayStr();
 }
 
+/** เลือกช่วงเกิน 1 ปีไหม (ฐานข้อมูลบังคับเพดานนี้ด้วยใน sales_summary และ sales_page_summary) */
+export function isRangeTooLong(fromDate: string, toDate: string) {
+  return dayjs(toDate).diff(dayjs(fromDate), "day") > 366;
+}
+
 /** เวลาเริ่ม/จบของวัน (ค่าเริ่มต้นของช่องเลือกเวลา = ดูทั้งวัน) */
 export const DAY_START = "00:00";
 export const DAY_END = "23:59";

@@ -1,6 +1,7 @@
 import { DateRangeFilter } from "@/components/DateRangeFilter";
+import { RangeTooLongNotice } from "@/components/RangeTooLongNotice";
 import { SummaryCards } from "@/components/SummaryCards";
-import { baht, dayRange, parseDateParam } from "@/lib/format";
+import { baht, dayRange, isRangeTooLong, parseDateParam } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 import type { SalesSummary } from "@/lib/types";
 
@@ -13,6 +14,16 @@ export default async function ReportsPage({
   const from = parseDateParam(sp.from);
   const to = parseDateParam(sp.to ?? sp.from);
   const range = dayRange(from, to);
+
+  if (isRangeTooLong(from, to)) {
+    return (
+      <div className="space-y-5">
+        <h1 className="text-2xl font-bold">รายงานกำไร</h1>
+        <DateRangeFilter from={from} to={to} />
+        <RangeTooLongNotice />
+      </div>
+    );
+  }
 
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("sales_summary", { p_from: range.from, p_to: range.to });

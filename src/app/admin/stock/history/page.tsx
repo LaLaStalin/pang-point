@@ -69,32 +69,29 @@ export default async function StockHistoryPage({
   const supabase = await createClient();
   // ดึงเกินมา 1 แถว ไว้รู้ว่ามีหน้าถัดไปไหม
   let query = supabase
-    .from("stock_movements")
-    .select("*")
+    .from("stock_movement_log")
+    .select("kind, at, product_id, qty_change, unit_cost, note, user_id, sale_id, supplier, adjustment_id")
     .gte("at", range.from)
     .lt("at", range.to)
     .order("at", { ascending: false })
     // เวลาเดียวกัน (สินค้าในบิล/รอบซื้อเดียวกัน) ต้องเรียงตายตัว ไม่งั้นข้ามหน้าแล้วแถวซ้ำ/หาย
-    .order("kind")
-    .order("sale_id", { ascending: false, nullsFirst: false })
-    .order("product_id")
-    .order("qty_change")
+    .order("id")
     .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-  if (kind === "adjust") query = query.like("kind", "adjust_%");
-  else if (kind !== "all") query = query.eq("kind", kind);
+  if (kind !== "all") query = query.eq("category", kind);
 
   // กราฟแสดงอย่างน้อย 14 วันถึงวันสุดท้ายที่เลือก เพื่อให้เทียบวันอื่นได้ แม้ค้นหาแค่วันเดียว (ยาวสุด 1 ปี)
   const minChartFrom = dayjs(to).subtract(13, "day").format("YYYY-MM-DD");
   const maxChartFrom = dayjs(to).subtract(365, "day").format("YYYY-MM-DD");
   const chartFrom = from < maxChartFrom ? maxChartFrom : from < minChartFrom ? from : minChartFrom;
 
-  const [{ data, error }, names, { data: daily, error: dailyError }] = await Promise.all([
+  // กราฟแสดงเฉพาะหน้าแรก เปลี่ยนหน้าตารางจะได้ไม่ต้องคำนวณกราฟซ้ำ
+  const [{ data, error }, names, dailyRes] = await Promise.all([
     query,
     getNameMaps(supabase),
-    supabase.rpc("daily_stock_movements", { p_from: chartFrom, p_to: to }),
+    page === 1 ? supabase.rpc("daily_stock_movements", { p_from: chartFrom, p_to: to }) : null,
   ]);
   if (error) throw new Error(error.message);
-  if (dailyError) console.error("daily_stock_movements:", dailyError.message);
+  if (dailyRes?.error) console.error("daily_stock_movements:", dailyRes.error.message);
   const hasNext = (data ?? []).length > PAGE_SIZE;
   const rows = ((data ?? []) as Movement[]).slice(0, PAGE_SIZE);
 
@@ -201,12 +198,14 @@ export default async function StockHistoryPage({
         </nav>
       )}
 
-      <StockDailyCharts
-        key={`${chartFrom}-${to}`}
-        data={(daily ?? []) as DailyMovement[]}
-        initialDay={to}
-        failed={!!dailyError}
-      />
+      {dailyRes && (
+        <StockDailyCharts
+          key={`${chartFrom}-${to}`}
+          data={(dailyRes.data ?? []) as DailyMovement[]}
+          initialDay={to}
+          failed={!!dailyRes.error}
+        />
+      )}
     </div>
   );
 }

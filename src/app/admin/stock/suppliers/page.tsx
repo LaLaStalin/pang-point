@@ -15,31 +15,41 @@ type SupplierRow = { supplier: string | null; rounds: number; qty: number; cost:
 type ProductRow = { product_id: number; qty: number; cost: number; min_cost: number; max_cost: number };
 
 const NO_SUPPLIER = "(ไม่ระบุร้าน)";
-// รายการรอบการซื้อของร้านที่เลือก ดึงเฉพาะล่าสุด (ยอดรวมด้านบนคิดจากทั้งหมดในฐานข้อมูล)
-const ROUND_LINES = 300;
+// จำนวนรอบการซื้อต่อหน้า
+const ROUNDS_PER_PAGE = 12;
 
-export default async function SuppliersPage({ searchParams }: { searchParams: Promise<{ s?: string }> }) {
-  const { s: selected } = await searchParams;
+export default async function SuppliersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ s?: string; page?: string }>;
+}) {
+  const { s: selected, page: pageParam } = await searchParams;
   // ชื่อ "(ไม่ระบุร้าน)" ในหน้าเว็บ = supplier เป็น null ในฐานข้อมูล
   const supplierParam = selected === NO_SUPPLIER ? null : (selected ?? null);
 
   const supabase = await createClient();
-  let roundsQuery = supabase
-    .from("stock_purchases")
-    .select("product_id, unit_cost, qty, note, created_at")
-    .order("created_at", { ascending: false })
-    .order("id")
-    .limit(ROUND_LINES);
-  roundsQuery = supplierParam === null ? roundsQuery.is("supplier", null) : roundsQuery.eq("supplier", supplierParam);
-
-  const [{ data, error }, { data: products }, byProductRes, roundsRes] = await Promise.all([
+  const [{ data, error }, { data: products }, byProductRes] = await Promise.all([
     supabase.rpc("supplier_summary"),
     supabase.from("products").select("*"),
     selected ? supabase.rpc("supplier_product_summary", { p_supplier: supplierParam }) : null,
-    selected ? roundsQuery : null,
   ]);
   if (error) throw new Error(error.message);
   if (byProductRes?.error) throw new Error(byProductRes.error.message);
+
+  // จำนวนรอบทั้งหมดมาจากยอดสรุปรายร้าน ใช้ถอยกลับหน้าสุดท้ายถ้าเลขหน้าเกิน
+  const roundCount = ((data ?? []) as SupplierRow[]).find((r) => (r.supplier ?? NO_SUPPLIER) === selected)?.rounds ?? 0;
+  const pageCount = Math.max(1, Math.ceil(roundCount / ROUNDS_PER_PAGE));
+  const page = Math.min(pageCount, Math.max(1, Math.floor(Number(pageParam)) || 1));
+  const pageHref = (p: number) =>
+    `?${new URLSearchParams({ s: selected ?? "", ...(p > 1 && { page: String(p) }) })}`;
+
+  const roundsRes = selected
+    ? await supabase.rpc("supplier_rounds", {
+        p_supplier: supplierParam,
+        p_limit: ROUNDS_PER_PAGE,
+        p_offset: (page - 1) * ROUNDS_PER_PAGE,
+      })
+    : null;
   if (roundsRes?.error) throw new Error(roundsRes.error.message);
 
   const summary = ((data ?? []) as SupplierRow[]).map((r) => ({
@@ -65,9 +75,6 @@ export default async function SuppliersPage({ searchParams }: { searchParams: Pr
   // แต่ละรอบการซื้อ = บรรทัดที่บันทึกพร้อมกัน (created_at เดียวกัน)
   const rounds = new Map<string, Purchase[]>();
   for (const p of purchases) rounds.set(p.created_at, [...(rounds.get(p.created_at) ?? []), p]);
-  // ดึงมาครบเพดาน = รอบสุดท้ายอาจได้มาไม่ครบทุกบรรทัด ตัดทิ้งไป
-  const truncated = purchases.length === ROUND_LINES;
-  if (truncated && rounds.size > 1) rounds.delete([...rounds.keys()].at(-1)!);
 
   return (
     <div className="space-y-4">
@@ -168,7 +175,27 @@ export default async function SuppliersPage({ searchParams }: { searchParams: Pr
               </section>
             ))}
           </div>
-          {truncated && <p className="text-sm text-stone-500">แสดงเฉพาะรอบการซื้อล่าสุด</p>}
+          {pageCount > 1 && (
+            <nav className="flex items-center justify-center gap-3">
+              {page > 1 ? (
+                <Link href={pageHref(page - 1)} className="btn-ghost">
+                  ← ก่อนหน้า
+                </Link>
+              ) : (
+                <span className="btn-ghost pointer-events-none opacity-40">← ก่อนหน้า</span>
+              )}
+              <span className="text-stone-600">
+                หน้า {page} / {pageCount}
+              </span>
+              {page < pageCount ? (
+                <Link href={pageHref(page + 1)} className="btn-ghost">
+                  ถัดไป →
+                </Link>
+              ) : (
+                <span className="btn-ghost pointer-events-none opacity-40">ถัดไป →</span>
+              )}
+            </nav>
+          )}
         </>
       )}
     </div>

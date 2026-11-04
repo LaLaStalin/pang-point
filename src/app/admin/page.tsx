@@ -3,6 +3,7 @@ import dayjs from "dayjs";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { DateRangeFilter } from "@/components/DateRangeFilter";
 import { DailySalesChart, ProductSalesChart, type DailySales } from "@/components/OverviewCharts";
+import { RangeTooLongNotice } from "@/components/RangeTooLongNotice";
 import { RefreshButton } from "@/components/RefreshButton";
 import { SummaryCards } from "@/components/SummaryCards";
 import {
@@ -11,6 +12,7 @@ import {
   dateTimeRange,
   dayRange,
   fmtDate,
+  isRangeTooLong,
   parseDateParam,
   parseTimeParam,
   todayStr,
@@ -44,6 +46,27 @@ export default async function AdminHome({
       : wholeDay
         ? `${fromLabel} – ${toLabel}`
         : `${fromLabel} ${fromTime} – ${toLabel} ${toTime}`;
+
+  if (isRangeTooLong(from, to)) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-bold">{title}</h1>
+        <div className="flex flex-wrap items-end gap-2">
+          <DateRangeFilter
+            key={`${from}_${fromTime}_${to}_${toTime}`}
+            from={from}
+            to={to}
+            fromTime={fromTime}
+            toTime={toTime}
+          />
+          <Link href="/admin" className="btn-ghost">
+            กลับไปดูวันนี้
+          </Link>
+        </div>
+        <RangeTooLongNotice />
+      </div>
+    );
+  }
 
   const supabase = await createClient();
   // กราฟรายวัน: 14 วันล่าสุด จบที่วัน "ถึง" ที่เลือก
